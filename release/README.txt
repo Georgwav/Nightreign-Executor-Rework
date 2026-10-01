@@ -64,8 +64,7 @@ Every player needs this same download and the same Seamless Co-op version.
 1. Install me3: https://github.com/garyttierney/me3/releases/latest (me3_installer.exe).
 2. Extract the zip into a new folder, e.g. C:\Games\ExecutorReworkCoop.
 3. Download Seamless Co-op for Nightreign and copy its SeamlessCoop folder (nrsc.dll,
-   nrsc_settings.ini) into that folder. Set your co-op password in
-   SeamlessCoop\nrsc_settings.ini; everyone uses the same one.
+   nrsc_settings.ini) into that folder.
 4. Optional, to keep your progress: with the game closed, run copy-save-to-coop.bat. It
    copies your save (NR0000.sl2) to the Seamless Co-op save (NR0000.co2). Never copy a
    co-op save back to NR0000.sl2.

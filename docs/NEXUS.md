@@ -90,7 +90,7 @@ To uninstall, remove the files. Starting the game from Steam is always vanilla.
 Co-op runs through [b]Seamless Co-op for Nightreign[/b] (download it separately). Every player needs the same version of Executor Rework and of Seamless Co-op. Download the optional [b]Seamless Co-op (me3)[/b] file:
 [list=1]
 [*]Install [url=https://github.com/garyttierney/me3/releases/latest]me3[/url] and extract the zip into a new folder.
-[*]Copy the SeamlessCoop folder from the Seamless Co-op download (nrsc.dll, nrsc_settings.ini) into that folder and set your co-op password in nrsc_settings.ini.
+[*]Copy the SeamlessCoop folder from the Seamless Co-op download (nrsc.dll, nrsc_settings.ini) into that folder.
 [*]Optional, to keep your progress: with the game closed, run [b]copy-save-to-coop.bat[/b] (copies your NR0000.sl2 save to the co-op save NR0000.co2).
 [*]Double-click [b]executor-rework-coop.me3[/b]. Don't use nrsc_launcher.exe, it starts the game without this mod.
 [/list]
