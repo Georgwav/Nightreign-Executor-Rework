@@ -1,0 +1,8 @@
+profileVersion = "v1"
+
+[[supports]]
+game = "nightreign"
+
+[[packages]]
+id = "executor-rework"
+path = '.'
