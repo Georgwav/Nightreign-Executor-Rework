@@ -41,8 +41,9 @@ Copy-Item "$src\params\HeroParam.csv" "$dir\HeroParam_rework.csv" -Force
 2. Open `SpEffectParam` in the Params list.
 3. In **Tools → Data Transfer → Import**: set **Import Mode** to **Selected Param**,
    make sure **Ignore Existing Rows** is **off**, then click **Import from File** and
-   pick `SpEffectParam_rework.csv`. It adds 25 new rows (707001–707009, 707012, 707013, 707301–707307,
-   707311–707317) and updates 707051, 707070, 707071, 707115, 7034401 and 7500701.
+   pick `SpEffectParam_rework.csv`. It adds 26 new rows (707001–707009, 707012–707014,
+   707301–707307, 707311–707317) and updates 707000, 707051, 707070, 707071, 707115, 7034401
+   and 7500701.
    Importing it again after an update is safe; rows that are already there are just updated.
 4. Open `HeroParam` and import `HeroParam_rework.csv` the same way.
 5. Save the project (**File → Save**, or Ctrl+S). This writes `regulation.bin` into
@@ -124,7 +125,14 @@ Play as the Executor, solo first.
 - [ ] Transform at around half HP: the Beast also starts at around half HP (no full heal).
 - [ ] Let the transformation end normally: HP goes back to what it was before transforming.
 - [ ] Let the Beast get "killed": you turn back into the Executor instead of dying, with
-      the HP from before transforming.
+      the HP from before transforming. Enemies can't hurt or stagger you until you can move
+      or roll again, and for 1 s after; attacking right away ends that.
+- [ ] Attack right out of the transformation, then let the Beast get "killed" or the gauge
+      run out: same as above (you don't come out at 1 HP).
+- [ ] In a deathblight area, the Beast gets no deathblight buildup.
+
+**Weapon coatings**
+- [ ] Coat a weapon (e.g. frost), block a few times and use the skill: the coating stays.
 
 ## Script test
 

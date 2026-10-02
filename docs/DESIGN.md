@@ -74,6 +74,10 @@ A successful deflect ends the recovery right away, so each hit of a combo can st
   equipped weapon is back in hand right away.
 - Your grip stays as it was: one-handed, the right weapon two-handed or the left weapon
   two-handed.
+- Weapon coatings (e.g. frost) stay on through the skill: the dash slash animations
+  (`a907_571020` / `571025`) apply the vanilla deflect window `707000`, whose category
+  `162` ("Remove Previous") removed the coating; the rework's copy of `707000` uses
+  category `20` like its own window effects.
 - Implementation: the script plays the dash slash (`W_DemonSwordArts`) and turns on the
   stance's animation layer (`AddDemonSwordModeBlend`), which holds the Cursed Sword,
   only while the slash plays. The layer (`a907_579000` / `579001`) sheathes the weapons and
@@ -104,13 +108,39 @@ The Beast has its own health, based on percentages:
   had before using the Ultimate Art.
 - The same happens when the transformation ends normally. Damage taken (or healing
   received) as the Beast does not carry over.
+- When the form ends you can't die, take damage from enemies or be staggered until you
+  can act again (roll), and for 1 s after that, so the rest of the combo that brought the
+  Beast down can't kill you before you can get away. It is only for getting away:
+  attacking, the skill, the Ultimate Art, a spell or an item ends it at once, and it never
+  lasts more than 3.5 s.
+- The Beast can't get deathblight.
 
 Implementation: behavior script + special effects.
 
 - The HP percentage is saved when the Ultimate Art is used, set on the Beast once the
   transformation is done, and restored when the form ends, in 1% steps (never below 1%).
+  "Done" is the first of: the Beast idle, an attack straight out of the transformation
+  (which skips the idle), or 3 s in Beast form. Before, attacking out of the transformation
+  skipped the setup: the Beast kept the vanilla full heal, couldn't end at 1 HP, and the
+  Executor came out of the form at 1 HP.
+- The form's end is detected whether or not the setup ran.
 - The Beast form has `noDead` set, so the killing blow leaves it at 1 HP; the script
   then ends the form instead.
+- Exit protection: `SpEffectParam 707014` (1 s, `noDead`, enemy and object damage x0,
+  poise damage x0 (`saReceiveDamageRate`), `disableCurse`), applied on both exits (when the
+  Beast falls, before its form is cleared) and then every frame until the Executor is in
+  the idle or move state again (`Idle_onUpdate` / `Move_onUpdate`), where it can act; then
+  it runs out 1 s later. The refreshing stops after 2.5 s at the latest. Any attack request
+  (`GetAttackRequest`: weapon, jump attack, skill, Ultimate Art) or a spell or item that is
+  used (`ExecMagic` / `ExecItem` returning TRUE) clears it at once; the script wraps those
+  three functions for this. It only starts when a Beast form from a new Ultimate Art ends.
+  The script test tries to stretch it (never going idle, attacking every frame, the form
+  flickering without a new Ultimate Art). There is no untransform
+  animation with its own cancel window to tie this to: the Beast form is the `707115` effect
+  that the Beast animations (`a907_670000` / `670010`) keep on.
+- The Beast form (`707115`) has `disableCurse`: a deathblight proc that `noDead` lets the
+  Beast survive can kill the Executor once the form ends (a likely cause of a death right
+  after the form in a deathblight area).
 - The Beast uses the normal HP bar; there is no separately drawn bar.
 
 ## Tunables

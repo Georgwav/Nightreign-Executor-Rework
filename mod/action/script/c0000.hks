@@ -1742,13 +1742,32 @@ end
 -- Executor Rework: the Beast has its own HP, based on percentages.
 -- Transforming keeps the Executor's HP percentage (no free heal), and whenever the Beast
 -- form ends, including the Beast "dying", the Executor gets back the HP percentage it had
--- before the Ultimate Art. 707115 has noDead set, so the Beast stops at 1 HP instead of dying.
+-- before the Ultimate Art. 707115 has noDead set, so the Beast stops at 1 HP instead of dying,
+-- and disableCurse, so the Beast gets no deathblight: a proc the Beast survives through noDead
+-- can kill the Executor once the form ends.
 EXECUTOR_BEAST_NONE = 0
 EXECUTOR_BEAST_TRANSFORMING = 1
 EXECUTOR_BEAST_ACTIVE = 2
 EXECUTOR_BEAST_ENDED = 3
 EXECUTOR_BEAST_STATE = EXECUTOR_BEAST_NONE
 EXECUTOR_PRE_BEAST_HP_RATIO = 1
+-- the Beast form has been on since this Ultimate Art started
+EXECUTOR_BEAST_SEEN = FALSE
+-- seconds in Beast form while still TRANSFORMING; the HP setup runs at the latest after
+-- EXECUTOR_BEAST_SETUP_TIMEOUT, in case neither the Beast idle nor an attack out of the
+-- transformation ran it
+EXECUTOR_BEAST_TRANSFORM_TIME = 0
+EXECUTOR_BEAST_SETUP_TIMEOUT = 3
+-- Exit protection (707014: noDead, no damage or poise damage from enemies, no deathblight,
+-- lasts 1 s): when the form ends it is applied every frame until the Executor is back in
+-- the idle or move state, where it can act (roll) again, so the hits that brought the
+-- Beast down can't kill or stagger it first. It then runs out 1 s later. The refreshing
+-- stops after EXECUTOR_BEAST_PROTECTION_MAX seconds at the latest. Attacking (weapon,
+-- skill, Ultimate Art), casting or using an item ends it at once: it is for getting away,
+-- never for fighting.
+EXECUTOR_BEAST_EXIT_PROTECTION = 707014
+EXECUTOR_BEAST_PROTECTION_MAX = 2.5
+EXECUTOR_BEAST_PROTECTION_LEFT = 0
 -- Instant HP change SpEffects: base + n changes HP by 2^(n-1) % of max HP (n = 1..7)
 EXECUTOR_HP_DAMAGE_BASE = 707300
 EXECUTOR_HP_HEAL_BASE = 707310
@@ -1761,6 +1780,35 @@ function SaveExecutorPreBeastHp()
         EXECUTOR_PRE_BEAST_HP_RATIO = 1
     end
     EXECUTOR_BEAST_STATE = EXECUTOR_BEAST_TRANSFORMING
+    EXECUTOR_BEAST_SEEN = FALSE
+    EXECUTOR_BEAST_TRANSFORM_TIME = 0
+end
+
+function StartExecutorBeastExitProtection()
+    act(2002, EXECUTOR_BEAST_EXIT_PROTECTION)
+    EXECUTOR_BEAST_PROTECTION_LEFT = EXECUTOR_BEAST_PROTECTION_MAX
+end
+
+-- Called from the idle and move states: the Executor can act again
+function ReleaseExecutorBeastExitProtection()
+    EXECUTOR_BEAST_PROTECTION_LEFT = 0
+end
+
+-- Called when the Executor attacks, casts or uses an item: the protection ends at once
+function EndExecutorBeastExitProtection()
+    EXECUTOR_BEAST_PROTECTION_LEFT = 0
+    if env(1116, EXECUTOR_BEAST_EXIT_PROTECTION) == TRUE then
+        act(9001, EXECUTOR_BEAST_EXIT_PROTECTION)
+    end
+end
+
+-- Once the transformation (and its vanilla heal) is done, the Beast gets the saved HP percentage
+function SetupExecutorBeastHp()
+    if EXECUTOR_BEAST_STATE == EXECUTOR_BEAST_TRANSFORMING and IsDemonBeastMode() == TRUE then
+        SetExecutorHpRatio(EXECUTOR_PRE_BEAST_HP_RATIO)
+        EXECUTOR_BEAST_STATE = EXECUTOR_BEAST_ACTIVE
+        EXECUTOR_BEAST_SEEN = TRUE
+    end
 end
 
 function ExecutorRound(x)
@@ -1799,7 +1847,14 @@ end
 
 -- Called every frame from Update()
 function ExecExecutorBeast()
-    if env(371) ~= HERO_TECHNICAL or EXECUTOR_BEAST_STATE == EXECUTOR_BEAST_NONE then
+    if env(371) ~= HERO_TECHNICAL then
+        return
+    end
+    if EXECUTOR_BEAST_PROTECTION_LEFT > 0 then
+        act(2002, EXECUTOR_BEAST_EXIT_PROTECTION)
+        EXECUTOR_BEAST_PROTECTION_LEFT = EXECUTOR_BEAST_PROTECTION_LEFT - GetDeltaTime()
+    end
+    if EXECUTOR_BEAST_STATE == EXECUTOR_BEAST_NONE then
         return
     end
     if EXECUTOR_BEAST_STATE == EXECUTOR_BEAST_ENDED then
@@ -1809,15 +1864,24 @@ function ExecExecutorBeast()
         return
     end
     if IsDemonBeastMode() == TRUE then
-        if EXECUTOR_BEAST_STATE == EXECUTOR_BEAST_ACTIVE and env(1000) <= 1 then
-            -- the Beast would have died: end the form instead
+        EXECUTOR_BEAST_SEEN = TRUE
+        if EXECUTOR_BEAST_STATE == EXECUTOR_BEAST_TRANSFORMING then
+            EXECUTOR_BEAST_TRANSFORM_TIME = EXECUTOR_BEAST_TRANSFORM_TIME + GetDeltaTime()
+            if EXECUTOR_BEAST_TRANSFORM_TIME >= EXECUTOR_BEAST_SETUP_TIMEOUT then
+                SetupExecutorBeastHp()
+            end
+        elseif EXECUTOR_BEAST_STATE == EXECUTOR_BEAST_ACTIVE and env(1000) <= 1 then
+            -- the Beast would have died: end the form instead, protected until the Executor can act
+            StartExecutorBeastExitProtection()
             act(9001, 707115)
             act(9001, 707100)
             act(9001, 707110)
             ExecEventAllBody("W_Idle")
             EXECUTOR_BEAST_STATE = EXECUTOR_BEAST_ENDED
         end
-    elseif EXECUTOR_BEAST_STATE == EXECUTOR_BEAST_ACTIVE then
+    elseif EXECUTOR_BEAST_SEEN == TRUE then
+        -- the form ended (gauge empty or undone), also when the HP setup never ran
+        StartExecutorBeastExitProtection()
         EXECUTOR_BEAST_STATE = EXECUTOR_BEAST_ENDED
     end
 end
@@ -2257,7 +2321,16 @@ HandChangeTest_ToR2 = FALSE
 HandChangeTest_ToL1 = FALSE
 HandChangeTest_ToL2 = FALSE
 
+-- Executor Rework: any attack (weapon, skill, Ultimate Art) ends the Beast exit protection
 function GetAttackRequest(is_guard)
+    local request = GetAttackRequestBase(is_guard)
+    if request ~= ATTACK_REQUEST_INVALID then
+        EndExecutorBeastExitProtection()
+    end
+    return request
+end
+
+function GetAttackRequestBase(is_guard)
     -- Executor Rework: no attacks until the Cursed Sword's layer from the skill's slash is gone
     if IsExecutorSkillAttackLocked() == TRUE then
         return ATTACK_REQUEST_INVALID
@@ -4029,7 +4102,16 @@ end
 
 lastUsedMagicAnim = -1
 
+-- Executor Rework: casting ends the Beast exit protection
 function ExecMagic(quick_type, blend_type, is_ride)
+    local result = ExecMagicBase(quick_type, blend_type, is_ride)
+    if result == TRUE then
+        EndExecutorBeastExitProtection()
+    end
+    return result
+end
+
+function ExecMagicBase(quick_type, blend_type, is_ride)
     if GetVariable("AddFookShotBlend") == 1 then
         return FALSE
     end
@@ -4453,7 +4535,16 @@ function ExecStealthItem(blend_type, item_type)
     
 end
 
+-- Executor Rework: using an item ends the Beast exit protection
 function ExecItem(quick_type, blend_type)
+    local result = ExecItemBase(quick_type, blend_type)
+    if result == TRUE then
+        EndExecutorBeastExitProtection()
+    end
+    return result
+end
+
+function ExecItemBase(quick_type, blend_type)
     if GetVariable("AddFookShotBlend") == 1 then
         return FALSE
     end
@@ -9958,6 +10049,8 @@ function Idle_onActivate()
 end
 
 function Idle_onUpdate()
+    -- Executor Rework: back in control after the Beast form
+    ReleaseExecutorBeastExitProtection()
     SetEnableMimicry()
     if ExecGroundNonCombatAreaEnter(HAND_RIGHT, FALSE, ALLBODY) == TRUE then
         return TRUE
@@ -10533,6 +10626,8 @@ function Move_onActivate()
 end
 
 function Move_onUpdate()
+    -- Executor Rework: back in control after the Beast form
+    ReleaseExecutorBeastExitProtection()
     act(101, TRUE)
     local move_speed = GetVariable("MoveSpeedIndex")
     if g_TimeActEditor_08 >= 1 then
@@ -17368,6 +17463,8 @@ end
 function DemonBeastStart_onUpdate()
     act(2020, 0, FALSE)
     if AttackCommonFunction("W_AttackRightLight1", "W_AttackRightHeavy1Start", "W_AttackLeftLight1", "W_AttackLeftHeavy1", "W_AttackBothLight1", "W_AttackBothHeavy1Start", FALSE, TRUE, 1, SET_SKILL_HAND_BOTH) == TRUE then
+        -- Executor Rework: attacking straight out of the transformation skips the Beast idle
+        SetupExecutorBeastHp()
         return
     end
     if env(339, 0) == TRUE then
@@ -17380,10 +17477,7 @@ end
 function DemonBeastIdle_onUpdate()
     act(2020, 0, FALSE)
     -- Executor Rework: once the transformation (and its vanilla heal) is done, the Beast gets the saved HP percentage
-    if EXECUTOR_BEAST_STATE == EXECUTOR_BEAST_TRANSFORMING and IsDemonBeastMode() == TRUE then
-        SetExecutorHpRatio(EXECUTOR_PRE_BEAST_HP_RATIO)
-        EXECUTOR_BEAST_STATE = EXECUTOR_BEAST_ACTIVE
-    end
+    SetupExecutorBeastHp()
     local height = env(224) / 100
     local damage_type = env(202)
     local style = c_Style

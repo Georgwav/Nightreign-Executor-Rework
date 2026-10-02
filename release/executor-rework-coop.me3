@@ -1,7 +1,7 @@
 # Executor Rework with Seamless Co-op.
 # Copy the SeamlessCoop folder from the Seamless Co-op download (the one with nrsc.dll and
-# nrsc_settings.ini) into this folder, set your password in nrsc_settings.ini, then
-# double-click this file. Don't use nrsc_launcher.exe: it starts the game without this mod.
+# nrsc_settings.ini) into this folder, then double-click this file. Don't use
+# nrsc_launcher.exe: it starts the game without this mod.
 profileVersion = "v1"
 
 [[supports]]
