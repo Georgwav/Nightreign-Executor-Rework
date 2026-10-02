@@ -47,7 +47,8 @@ Mashing block never deflects: a press only opens a window if the previous one wa
 
 - You transform at your current health percentage; there is no free heal.
 - When the form ends, or the Beast is "killed", you turn back with the health you had
-  before transforming, and enemies can't hurt you for 1.5 s.
+  before transforming. Until you can act again (and 1 s more), enemies can't hurt or
+  stagger you, so you can roll away.
 - The Beast can't get deathblight.
 
 ### Relics

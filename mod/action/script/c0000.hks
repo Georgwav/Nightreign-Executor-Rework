@@ -1758,9 +1758,14 @@ EXECUTOR_BEAST_SEEN = FALSE
 -- transformation ran it
 EXECUTOR_BEAST_TRANSFORM_TIME = 0
 EXECUTOR_BEAST_SETUP_TIMEOUT = 3
--- 1.5 s of noDead and no damage from enemies when the form ends, so the hits that brought
--- the Beast down can't kill the Executor before its HP is back
+-- Exit protection (707014: noDead, no damage or poise damage from enemies, no deathblight,
+-- lasts 1 s): when the form ends it is applied every frame until the Executor is back in
+-- the idle or move state, where it can act (roll) again, so the hits that brought the
+-- Beast down can't kill or stagger it first. It then runs out 1 s later. The refreshing
+-- stops after EXECUTOR_BEAST_PROTECTION_MAX seconds at the latest.
 EXECUTOR_BEAST_EXIT_PROTECTION = 707014
+EXECUTOR_BEAST_PROTECTION_MAX = 5
+EXECUTOR_BEAST_PROTECTION_LEFT = 0
 -- Instant HP change SpEffects: base + n changes HP by 2^(n-1) % of max HP (n = 1..7)
 EXECUTOR_HP_DAMAGE_BASE = 707300
 EXECUTOR_HP_HEAL_BASE = 707310
@@ -1775,6 +1780,16 @@ function SaveExecutorPreBeastHp()
     EXECUTOR_BEAST_STATE = EXECUTOR_BEAST_TRANSFORMING
     EXECUTOR_BEAST_SEEN = FALSE
     EXECUTOR_BEAST_TRANSFORM_TIME = 0
+end
+
+function StartExecutorBeastExitProtection()
+    act(2002, EXECUTOR_BEAST_EXIT_PROTECTION)
+    EXECUTOR_BEAST_PROTECTION_LEFT = EXECUTOR_BEAST_PROTECTION_MAX
+end
+
+-- Called from the idle and move states: the Executor can act again
+function ReleaseExecutorBeastExitProtection()
+    EXECUTOR_BEAST_PROTECTION_LEFT = 0
 end
 
 -- Once the transformation (and its vanilla heal) is done, the Beast gets the saved HP percentage
@@ -1822,7 +1837,14 @@ end
 
 -- Called every frame from Update()
 function ExecExecutorBeast()
-    if env(371) ~= HERO_TECHNICAL or EXECUTOR_BEAST_STATE == EXECUTOR_BEAST_NONE then
+    if env(371) ~= HERO_TECHNICAL then
+        return
+    end
+    if EXECUTOR_BEAST_PROTECTION_LEFT > 0 then
+        act(2002, EXECUTOR_BEAST_EXIT_PROTECTION)
+        EXECUTOR_BEAST_PROTECTION_LEFT = EXECUTOR_BEAST_PROTECTION_LEFT - GetDeltaTime()
+    end
+    if EXECUTOR_BEAST_STATE == EXECUTOR_BEAST_NONE then
         return
     end
     if EXECUTOR_BEAST_STATE == EXECUTOR_BEAST_ENDED then
@@ -1839,8 +1861,8 @@ function ExecExecutorBeast()
                 SetupExecutorBeastHp()
             end
         elseif EXECUTOR_BEAST_STATE == EXECUTOR_BEAST_ACTIVE and env(1000) <= 1 then
-            -- the Beast would have died: end the form instead, protected until the HP is back
-            act(2002, EXECUTOR_BEAST_EXIT_PROTECTION)
+            -- the Beast would have died: end the form instead, protected until the Executor can act
+            StartExecutorBeastExitProtection()
             act(9001, 707115)
             act(9001, 707100)
             act(9001, 707110)
@@ -1849,7 +1871,7 @@ function ExecExecutorBeast()
         end
     elseif EXECUTOR_BEAST_SEEN == TRUE then
         -- the form ended (gauge empty or undone), also when the HP setup never ran
-        act(2002, EXECUTOR_BEAST_EXIT_PROTECTION)
+        StartExecutorBeastExitProtection()
         EXECUTOR_BEAST_STATE = EXECUTOR_BEAST_ENDED
     end
 end
@@ -9990,6 +10012,8 @@ function Idle_onActivate()
 end
 
 function Idle_onUpdate()
+    -- Executor Rework: back in control after the Beast form
+    ReleaseExecutorBeastExitProtection()
     SetEnableMimicry()
     if ExecGroundNonCombatAreaEnter(HAND_RIGHT, FALSE, ALLBODY) == TRUE then
         return TRUE
@@ -10565,6 +10589,8 @@ function Move_onActivate()
 end
 
 function Move_onUpdate()
+    -- Executor Rework: back in control after the Beast form
+    ReleaseExecutorBeastExitProtection()
     act(101, TRUE)
     local move_speed = GetVariable("MoveSpeedIndex")
     if g_TimeActEditor_08 >= 1 then

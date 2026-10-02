@@ -125,7 +125,8 @@ Play as the Executor, solo first.
 - [ ] Transform at around half HP: the Beast also starts at around half HP (no full heal).
 - [ ] Let the transformation end normally: HP goes back to what it was before transforming.
 - [ ] Let the Beast get "killed": you turn back into the Executor instead of dying, with
-      the HP from before transforming, and enemies can't hurt you for 1.5 s.
+      the HP from before transforming. Enemies can't hurt or stagger you until you can move
+      or roll again, and for 1 s after.
 - [ ] Attack right out of the transformation, then let the Beast get "killed" or the gauge
       run out: same as above (you don't come out at 1 HP).
 - [ ] In a deathblight area, the Beast gets no deathblight buildup.

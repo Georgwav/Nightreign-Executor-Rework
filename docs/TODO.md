@@ -8,7 +8,8 @@ Re-import `mod/params/SpEffectParam.csv` in Smithbox (it changes 707000 and 7071
 707014), save, rebuild, then check (list in [INSTALL.md](INSTALL.md#4-what-to-test)):
 - a weapon coating stays through blocking and through the skill;
 - attacking right out of the Beast transformation, then letting the Beast fall or the gauge
-  run out, brings you back with your HP from before (not 1 HP), protected for 1.5 s;
+  run out, brings you back with your HP from before (not 1 HP), and you can't be hurt or
+  staggered until you can roll (plus 1 s);
 - no deathblight buildup in Beast form.
 
 Co-op is tested (a full run with Seamless Co-op 1.1.3 through `executor-rework-coop.me3`),

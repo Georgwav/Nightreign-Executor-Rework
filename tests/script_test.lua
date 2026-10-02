@@ -267,7 +267,7 @@ EXECUTOR_SKILL_ATTACK_LOCK_LEFT = 0
 print("== Beast HP: setup, the Beast falling, the form ending")
 local function act_index(id, a) for i, v in ipairs(W.acts) do if v[1] == id and v[2] == a then return i end end return nil end
 local function start_beast(hp)
-    reset_world(); W.hp = hp; EXECUTOR_BEAST_STATE = EXECUTOR_BEAST_NONE
+    reset_world(); W.hp = hp; EXECUTOR_BEAST_STATE = EXECUTOR_BEAST_NONE; EXECUTOR_BEAST_PROTECTION_LEFT = 0
     SaveExecutorPreBeastHp()
     W.sp[707115] = true; W.max_hp = 2000; W.hp = 2000 -- Beast form on, vanilla full heal
 end
@@ -305,7 +305,27 @@ check(count_act(2002, EXECUTOR_BEAST_EXIT_PROTECTION) == 1, "exit protection whe
 frame()
 check(W.hp == 700, "Executor back at 70% (" .. W.hp .. ")")
 W.acts = {}; frame(); frame()
-check(count_act(2002, EXECUTOR_BEAST_EXIT_PROTECTION) == 0 and EXECUTOR_BEAST_STATE == EXECUTOR_BEAST_NONE, "nothing more after the restore")
+check(EXECUTOR_BEAST_STATE == EXECUTOR_BEAST_NONE and W.hp == 700, "nothing more after the restore")
+
+print("== exit protection holds until the Executor can act again")
+start_beast(600); SetupExecutorBeastHp()
+W.hp = 1; frame()                                   -- the Beast falls
+W.max_hp = 1000
+W.acts = {}; for i = 1, 20 do frame() end
+check(count_act(2002, EXECUTOR_BEAST_EXIT_PROTECTION) == 20, "protection refreshed every frame while not back in control (" .. count_act(2002, EXECUTOR_BEAST_EXIT_PROTECTION) .. " of 20)")
+pcall(Idle_onUpdate)                                 -- back in the idle state
+W.acts = {}; for i = 1, 5 do frame() end
+check(count_act(2002, EXECUTOR_BEAST_EXIT_PROTECTION) == 0, "no more refreshing once idle (the last one runs out 1 s later)")
+start_beast(600); SetupExecutorBeastHp()
+W.sp[707115] = nil; W.max_hp = 1000; frame()        -- gauge runs out
+pcall(Move_onUpdate)                                 -- already moving
+W.acts = {}; frame()
+check(count_act(2002, EXECUTOR_BEAST_EXIT_PROTECTION) == 0, "moving also counts as back in control")
+start_beast(600); SetupExecutorBeastHp()
+W.hp = 1; frame(); W.max_hp = 1000
+for i = 1, 160 do frame() end                        -- 5.3 s, never idle
+W.acts = {}; frame()
+check(count_act(2002, EXECUTOR_BEAST_EXIT_PROTECTION) == 0, "refreshing stops after 5 s at the latest")
 
 print("== Ultimate Art cancelled before the Beast form came on")
 start_beast(500); W.sp[707115] = nil; W.max_hp = 1000; W.hp = 500; W.acts = {}

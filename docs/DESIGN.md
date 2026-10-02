@@ -108,8 +108,9 @@ The Beast has its own health, based on percentages:
   had before using the Ultimate Art.
 - The same happens when the transformation ends normally. Damage taken (or healing
   received) as the Beast does not carry over.
-- For 1.5 s after the form ends you can't die or take damage from enemies, so the rest of
-  the combo that brought the Beast down can't kill you before your HP is back.
+- When the form ends you can't die, take damage from enemies or be staggered until you
+  can act again (roll), and for 1 s after that, so the rest of the combo that brought the
+  Beast down can't kill you before you can get away.
 - The Beast can't get deathblight.
 
 Implementation: behavior script + special effects.
@@ -123,8 +124,13 @@ Implementation: behavior script + special effects.
 - The form's end is detected whether or not the setup ran.
 - The Beast form has `noDead` set, so the killing blow leaves it at 1 HP; the script
   then ends the form instead.
-- Exit protection: `SpEffectParam 707014` (1.5 s, `noDead`, enemy and object damage x0,
-  `disableCurse`), applied on both exits; when the Beast falls, before its form is cleared.
+- Exit protection: `SpEffectParam 707014` (1 s, `noDead`, enemy and object damage x0,
+  poise damage x0 (`saReceiveDamageRate`), `disableCurse`), applied on both exits (when the
+  Beast falls, before its form is cleared) and then every frame until the Executor is in
+  the idle or move state again (`Idle_onUpdate` / `Move_onUpdate`), where it can act; then
+  it runs out 1 s later. The refreshing stops after 5 s at the latest. There is no untransform
+  animation with its own cancel window to tie this to: the Beast form is the `707115` effect
+  that the Beast animations (`a907_670000` / `670010`) keep on.
 - The Beast form (`707115`) has `disableCurse`: a deathblight proc that `noDead` lets the
   Beast survive can kill the Executor once the form ends (a likely cause of a death right
   after the form in a deathblight area).
