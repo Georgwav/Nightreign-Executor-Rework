@@ -10,8 +10,9 @@ The Executor becomes a deflect duelist with any dexterity weapon:
   seals cannot deflect. Mashing block never deflects.
 - Character Skill "Cursed Sword": a dash slash with Suncatcher (12 s cooldown). Four
   deflects imbue Suncatcher with golden light for 20 s; the next slash is the empowered one.
-- Ultimate Art: the Beast keeps your health percentage (no free heal); when it ends or
-  falls you return with the health you had before.
+- Ultimate Art: the Beast keeps your health percentage (no free heal) and can't get
+  deathblight; when it ends or falls you return with the health you had before, and
+  enemies can't hurt you for 1.5 s.
 - The Executor skill relics trigger on the empowered slash.
 
 OFFLINE ONLY. Mod loaders start the game without Easy Anti-Cheat and without the official

@@ -19,6 +19,7 @@ function reset_world()
         hero = "HERO_TECHNICAL", sp = {}, stamina = 100, pressed = {}, held = {},
         category = { }, guard_level = 1, damage_type = 0, damage_level = DAMAGE_LEVEL_SMALL,
         damaged = TRUE, vars = {}, events = {}, acts = {}, nodes = {}, frame = 0,
+        hp = 500, max_hp = 1000,
     }
 end
 reset_world()
@@ -35,15 +36,19 @@ function engine.env(id, a, ...)
     if id == 202 then return W.damage_type end
     if id == 236 then return W.damage_level end
     if id == 256 then return W.damaged end
-    if id == 1000 then return 500 end
-    if id == 2013 then return 1000 end
+    if id == 1000 then return W.hp end
+    if id == 2013 then return W.max_hp end
     if id == 333 then return 33 end -- frame time in ms (GetDeltaTime)
     return 0
 end
 function engine.act(id, a, b)
     table.insert(W.acts, { id, a })
     if id == 148 then W.vars[a] = b
-    elseif id == 2002 then W.sp[a] = true
+    elseif id == 2002 then
+        W.sp[a] = true
+        -- the rework's instant HP change effects: 707300 + n / 707310 + n = -/+ 2^(n-1) % of max HP
+        if a > 707300 and a <= 707307 then W.hp = W.hp - W.max_hp * 2 ^ (a - 707301) / 100 end
+        if a > 707310 and a <= 707317 then W.hp = W.hp + W.max_hp * 2 ^ (a - 707311) / 100 end
     elseif id == 9001 then W.sp[a] = nil
     elseif id == 1001 then W.stamina = W.stamina + a end
 end
@@ -258,6 +263,54 @@ check(r1_request() ~= ATTACK_REQUEST_INVALID, "R1 works again once the layer is 
 reset_world(); W.hero = "HERO_MAGIC"; EXECUTOR_SKILL_ATTACK_LOCK_LEFT = 1
 check(r1_request() ~= ATTACK_REQUEST_INVALID, "no attack lock for other heroes")
 EXECUTOR_SKILL_ATTACK_LOCK_LEFT = 0
+
+print("== Beast HP: setup, the Beast falling, the form ending")
+local function act_index(id, a) for i, v in ipairs(W.acts) do if v[1] == id and v[2] == a then return i end end return nil end
+local function start_beast(hp)
+    reset_world(); W.hp = hp; EXECUTOR_BEAST_STATE = EXECUTOR_BEAST_NONE
+    SaveExecutorPreBeastHp()
+    W.sp[707115] = true; W.max_hp = 2000; W.hp = 2000 -- Beast form on, vanilla full heal
+end
+start_beast(300)
+SetupExecutorBeastHp()
+check(EXECUTOR_BEAST_STATE == EXECUTOR_BEAST_ACTIVE and W.hp == 600, "Beast gets the Executor's 30% (" .. W.hp .. " of 2000)")
+-- the Beast falls: noDead holds it at 1 HP
+W.hp = 1; W.acts = {}; frame()
+local prot, clear = act_index(2002, EXECUTOR_BEAST_EXIT_PROTECTION), act_index(9001, 707115)
+check(prot and clear and prot < clear, "exit protection goes on before the Beast form is cleared")
+check(EXECUTOR_BEAST_STATE == EXECUTOR_BEAST_ENDED and not W.sp[707115], "form ended instead of the Beast dying")
+W.max_hp = 1000; frame()
+check(math.abs(W.hp - 300) <= 10 and EXECUTOR_BEAST_STATE == EXECUTOR_BEAST_NONE, "Executor back at 30% (" .. W.hp .. " of 1000, 1% steps from 1 HP)")
+
+print("== attacking straight out of the transformation (no Beast idle)")
+start_beast(800)
+for i = 1, 30 do frame() end
+check(EXECUTOR_BEAST_STATE == EXECUTOR_BEAST_TRANSFORMING, "no setup during the first second without the idle")
+for i = 1, 80 do frame() end
+check(EXECUTOR_BEAST_STATE == EXECUTOR_BEAST_ACTIVE and W.hp == 1600, "HP setup runs by the 3 s fallback (" .. W.hp .. " of 2000)")
+
+print("== form ends before the HP setup ran")
+start_beast(250)
+frame(); frame()
+W.sp[707115] = nil; W.max_hp = 1000; W.hp = 1; W.acts = {}; frame()
+check(count_act(2002, EXECUTOR_BEAST_EXIT_PROTECTION) == 1 and EXECUTOR_BEAST_STATE == EXECUTOR_BEAST_ENDED, "exit protection and HP restore start even though the setup never ran")
+frame()
+check(math.abs(W.hp - 250) <= 10 and EXECUTOR_BEAST_STATE == EXECUTOR_BEAST_NONE, "Executor back at 25% instead of 1 HP (" .. W.hp .. ")")
+
+print("== gauge runs out")
+start_beast(700)
+SetupExecutorBeastHp(); W.hp = 900
+W.sp[707115] = nil; W.max_hp = 1000; W.hp = 450; W.acts = {}; frame()
+check(count_act(2002, EXECUTOR_BEAST_EXIT_PROTECTION) == 1, "exit protection when the form ends normally")
+frame()
+check(W.hp == 700, "Executor back at 70% (" .. W.hp .. ")")
+W.acts = {}; frame(); frame()
+check(count_act(2002, EXECUTOR_BEAST_EXIT_PROTECTION) == 0 and EXECUTOR_BEAST_STATE == EXECUTOR_BEAST_NONE, "nothing more after the restore")
+
+print("== Ultimate Art cancelled before the Beast form came on")
+start_beast(500); W.sp[707115] = nil; W.max_hp = 1000; W.hp = 500; W.acts = {}
+for i = 1, 5 do frame() end
+check(count_act(2002, EXECUTOR_BEAST_EXIT_PROTECTION) == 0 and W.hp == 500, "no protection or HP change without a Beast form")
 
 print(string.format("\n%d passed, %d failed", pass, fail))
 if fail > 0 then os.exit(1) end

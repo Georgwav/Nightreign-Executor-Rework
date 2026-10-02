@@ -74,6 +74,10 @@ A successful deflect ends the recovery right away, so each hit of a combo can st
   equipped weapon is back in hand right away.
 - Your grip stays as it was: one-handed, the right weapon two-handed or the left weapon
   two-handed.
+- Weapon coatings (e.g. frost) stay on through the skill: the dash slash animations
+  (`a907_571020` / `571025`) apply the vanilla deflect window `707000`, whose category
+  `162` ("Remove Previous") removed the coating; the rework's copy of `707000` uses
+  category `20` like its own window effects.
 - Implementation: the script plays the dash slash (`W_DemonSwordArts`) and turns on the
   stance's animation layer (`AddDemonSwordModeBlend`), which holds the Cursed Sword,
   only while the slash plays. The layer (`a907_579000` / `579001`) sheathes the weapons and
@@ -104,13 +108,26 @@ The Beast has its own health, based on percentages:
   had before using the Ultimate Art.
 - The same happens when the transformation ends normally. Damage taken (or healing
   received) as the Beast does not carry over.
+- For 1.5 s after the form ends you can't die or take damage from enemies, so the rest of
+  the combo that brought the Beast down can't kill you before your HP is back.
+- The Beast can't get deathblight.
 
 Implementation: behavior script + special effects.
 
 - The HP percentage is saved when the Ultimate Art is used, set on the Beast once the
   transformation is done, and restored when the form ends, in 1% steps (never below 1%).
+  "Done" is the first of: the Beast idle, an attack straight out of the transformation
+  (which skips the idle), or 3 s in Beast form. Before, attacking out of the transformation
+  skipped the setup: the Beast kept the vanilla full heal, couldn't end at 1 HP, and the
+  Executor came out of the form at 1 HP.
+- The form's end is detected whether or not the setup ran.
 - The Beast form has `noDead` set, so the killing blow leaves it at 1 HP; the script
   then ends the form instead.
+- Exit protection: `SpEffectParam 707014` (1.5 s, `noDead`, enemy and object damage x0,
+  `disableCurse`), applied on both exits; when the Beast falls, before its form is cleared.
+- The Beast form (`707115`) has `disableCurse`: a deathblight proc that `noDead` lets the
+  Beast survive can kill the Executor once the form ends (a likely cause of a death right
+  after the form in a deathblight area).
 - The Beast uses the normal HP bar; there is no separately drawn bar.
 
 ## Tunables

@@ -2,22 +2,22 @@
 
 ## Next up
 
-### 1. Release test
+### 1. Test the fixes from the second co-op run
 
-Test the release zips from a fresh folder and as a package in an existing me3 profile (see
-[RELEASE.md](RELEASE.md#3-test-like-a-player)). Check the
-new texts (see [TEXT.md](TEXT.md)) on the character select screen: the lines must not overflow
-their boxes.
+Re-import `mod/params/SpEffectParam.csv` in Smithbox (it changes 707000 and 707115 and adds
+707014), save, rebuild, then check (list in [INSTALL.md](INSTALL.md#4-what-to-test)):
+- a weapon coating stays through blocking and through the skill;
+- attacking right out of the Beast transformation, then letting the Beast fall or the gauge
+  run out, brings you back with your HP from before (not 1 HP), protected for 1.5 s;
+- no deathblight buildup in Beast form.
 
-### 2. Weapon coating test
+Co-op is tested (a full run with Seamless Co-op 1.1.3 through `executor-rework-coop.me3`),
+and so is the coating staying on through blocking.
 
-Coat a weapon (e.g. frost) and block a few times: the coating must stay. The deflect window
-effects no longer use the vanilla "Remove Previous" category 162, which removed it. (Co-op
-is tested: a full run with Seamless Co-op 1.1.3 through `executor-rework-coop.me3`.)
-
-### 3. Publish
+### 2. Publish
 
 - Nexus Mods page: see [NEXUS.md](NEXUS.md).
+- GitHub release on the public repository with the four zips.
 
 ## Also open
 
