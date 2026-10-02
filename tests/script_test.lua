@@ -325,7 +325,51 @@ start_beast(600); SetupExecutorBeastHp()
 W.hp = 1; frame(); W.max_hp = 1000
 for i = 1, 160 do frame() end                        -- 5.3 s, never idle
 W.acts = {}; frame()
-check(count_act(2002, EXECUTOR_BEAST_EXIT_PROTECTION) == 0, "refreshing stops after 5 s at the latest")
+check(count_act(2002, EXECUTOR_BEAST_EXIT_PROTECTION) == 0, "refreshing stops after " .. EXECUTOR_BEAST_PROTECTION_MAX .. " s at the latest")
+
+print("== no exploit: the exit protection can't be stretched or used to fight")
+local function undo_beast()
+    start_beast(800); SetupExecutorBeastHp()
+    W.sp[707115] = nil; W.max_hp = 1000; frame()          -- undo the form right away
+end
+local function refreshed_frames(n, each)
+    local c = 0
+    for i = 1, n do W.acts = {}; if each then each(i) end; frame(); if count_act(2002, EXECUTOR_BEAST_EXIT_PROTECTION) > 0 then c = c + 1 end end
+    return c
+end
+undo_beast()
+local c = refreshed_frames(300)                            -- 10 s without ever going idle or moving
+check(c * 0.033 <= EXECUTOR_BEAST_PROTECTION_MAX + 0.04, string.format("never idle: refreshed for %.2f s, capped at %.1f s (+1 s tail)", c * 0.033, EXECUTOR_BEAST_PROTECTION_MAX))
+undo_beast(); frame()
+W.acts = {}; r1_request()
+check(count_act(9001, EXECUTOR_BEAST_EXIT_PROTECTION) == 1 and not W.sp[EXECUTOR_BEAST_EXIT_PROTECTION], "an attack ends the protection at once")
+c = refreshed_frames(100, function() r1_request() end)
+check(c == 0, "keep attacking: no protection again (" .. c .. " frames)")
+local request_base = GetAttackRequestBase
+for _, req in ipairs({ "ATTACK_REQUEST_ULTRA", "ATTACK_REQUEST_DEMONSWORDARTS" }) do
+    GetAttackRequestBase = function() return _G[req] end
+    undo_beast(); frame(); GetAttackRequest(FALSE)
+    check(not W.sp[EXECUTOR_BEAST_EXIT_PROTECTION], req .. " ends the protection too")
+end
+GetAttackRequestBase = request_base
+local magic_base, item_base = ExecMagicBase, ExecItemBase
+ExecMagicBase = function() return TRUE end; ExecItemBase = function() return TRUE end
+undo_beast(); frame(); ExecMagic(0, ALLBODY, FALSE)
+check(not W.sp[EXECUTOR_BEAST_EXIT_PROTECTION] and EXECUTOR_BEAST_PROTECTION_LEFT == 0, "casting ends the protection")
+undo_beast(); frame(); ExecItem(0, ALLBODY)
+check(not W.sp[EXECUTOR_BEAST_EXIT_PROTECTION] and EXECUTOR_BEAST_PROTECTION_LEFT == 0, "using an item ends the protection")
+ExecMagicBase = function() return FALSE end; ExecItemBase = function() return FALSE end
+undo_beast(); frame(); ExecMagic(0, ALLBODY, FALSE); ExecItem(0, ALLBODY)
+check(W.sp[EXECUTOR_BEAST_EXIT_PROTECTION] and EXECUTOR_BEAST_PROTECTION_LEFT > 0, "checking for a spell or item without using one keeps it")
+ExecMagicBase, ExecItemBase = magic_base, item_base
+undo_beast(); for i = 1, 5 do frame() end
+for i = 1, 200 do W.sp[707115] = (i % 20 < 10) or nil; frame() end   -- form flickers on and off, no new Ultimate Art
+W.acts = {}; for i = 1, 5 do frame() end
+check(count_act(2002, EXECUTOR_BEAST_EXIT_PROTECTION) == 0 and EXECUTOR_BEAST_STATE == EXECUTOR_BEAST_NONE, "no protection again without a new Ultimate Art")
+W.sp[707115] = nil
+reset_world(); W.hero = "HERO_MAGIC"; EXECUTOR_BEAST_PROTECTION_LEFT = 0
+W.acts = {}; for i = 1, 5 do frame() end; r1_request()
+check(count_act(2002, EXECUTOR_BEAST_EXIT_PROTECTION) == 0 and count_act(9001, EXECUTOR_BEAST_EXIT_PROTECTION) == 0, "nothing for other heroes")
 
 print("== Ultimate Art cancelled before the Beast form came on")
 start_beast(500); W.sp[707115] = nil; W.max_hp = 1000; W.hp = 500; W.acts = {}

@@ -110,7 +110,9 @@ The Beast has its own health, based on percentages:
   received) as the Beast does not carry over.
 - When the form ends you can't die, take damage from enemies or be staggered until you
   can act again (roll), and for 1 s after that, so the rest of the combo that brought the
-  Beast down can't kill you before you can get away.
+  Beast down can't kill you before you can get away. It is only for getting away:
+  attacking, the skill, the Ultimate Art, a spell or an item ends it at once, and it never
+  lasts more than 3.5 s.
 - The Beast can't get deathblight.
 
 Implementation: behavior script + special effects.
@@ -128,7 +130,12 @@ Implementation: behavior script + special effects.
   poise damage x0 (`saReceiveDamageRate`), `disableCurse`), applied on both exits (when the
   Beast falls, before its form is cleared) and then every frame until the Executor is in
   the idle or move state again (`Idle_onUpdate` / `Move_onUpdate`), where it can act; then
-  it runs out 1 s later. The refreshing stops after 5 s at the latest. There is no untransform
+  it runs out 1 s later. The refreshing stops after 2.5 s at the latest. Any attack request
+  (`GetAttackRequest`: weapon, jump attack, skill, Ultimate Art) or a spell or item that is
+  used (`ExecMagic` / `ExecItem` returning TRUE) clears it at once; the script wraps those
+  three functions for this. It only starts when a Beast form from a new Ultimate Art ends.
+  The script test tries to stretch it (never going idle, attacking every frame, the form
+  flickering without a new Ultimate Art). There is no untransform
   animation with its own cancel window to tie this to: the Beast form is the `707115` effect
   that the Beast animations (`a907_670000` / `670010`) keep on.
 - The Beast form (`707115`) has `disableCurse`: a deathblight proc that `noDead` lets the

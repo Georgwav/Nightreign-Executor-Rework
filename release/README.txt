@@ -12,7 +12,8 @@ The Executor becomes a deflect duelist with any dexterity weapon:
   deflects imbue Suncatcher with golden light for 20 s; the next slash is the empowered one.
 - Ultimate Art: the Beast keeps your health percentage (no free heal) and can't get
   deathblight; when it ends or falls you return with the health you had before, and
-  enemies can't hurt or stagger you until you can act again (and 1 s more).
+  enemies can't hurt or stagger you until you can act again (and 1 s more), unless you
+  attack or use a spell or item.
 - The Executor skill relics trigger on the empowered slash.
 
 OFFLINE ONLY. Mod loaders start the game without Easy Anti-Cheat and without the official

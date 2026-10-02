@@ -1762,9 +1762,11 @@ EXECUTOR_BEAST_SETUP_TIMEOUT = 3
 -- lasts 1 s): when the form ends it is applied every frame until the Executor is back in
 -- the idle or move state, where it can act (roll) again, so the hits that brought the
 -- Beast down can't kill or stagger it first. It then runs out 1 s later. The refreshing
--- stops after EXECUTOR_BEAST_PROTECTION_MAX seconds at the latest.
+-- stops after EXECUTOR_BEAST_PROTECTION_MAX seconds at the latest. Attacking (weapon,
+-- skill, Ultimate Art), casting or using an item ends it at once: it is for getting away,
+-- never for fighting.
 EXECUTOR_BEAST_EXIT_PROTECTION = 707014
-EXECUTOR_BEAST_PROTECTION_MAX = 5
+EXECUTOR_BEAST_PROTECTION_MAX = 2.5
 EXECUTOR_BEAST_PROTECTION_LEFT = 0
 -- Instant HP change SpEffects: base + n changes HP by 2^(n-1) % of max HP (n = 1..7)
 EXECUTOR_HP_DAMAGE_BASE = 707300
@@ -1790,6 +1792,14 @@ end
 -- Called from the idle and move states: the Executor can act again
 function ReleaseExecutorBeastExitProtection()
     EXECUTOR_BEAST_PROTECTION_LEFT = 0
+end
+
+-- Called when the Executor attacks, casts or uses an item: the protection ends at once
+function EndExecutorBeastExitProtection()
+    EXECUTOR_BEAST_PROTECTION_LEFT = 0
+    if env(1116, EXECUTOR_BEAST_EXIT_PROTECTION) == TRUE then
+        act(9001, EXECUTOR_BEAST_EXIT_PROTECTION)
+    end
 end
 
 -- Once the transformation (and its vanilla heal) is done, the Beast gets the saved HP percentage
@@ -2311,7 +2321,16 @@ HandChangeTest_ToR2 = FALSE
 HandChangeTest_ToL1 = FALSE
 HandChangeTest_ToL2 = FALSE
 
+-- Executor Rework: any attack (weapon, skill, Ultimate Art) ends the Beast exit protection
 function GetAttackRequest(is_guard)
+    local request = GetAttackRequestBase(is_guard)
+    if request ~= ATTACK_REQUEST_INVALID then
+        EndExecutorBeastExitProtection()
+    end
+    return request
+end
+
+function GetAttackRequestBase(is_guard)
     -- Executor Rework: no attacks until the Cursed Sword's layer from the skill's slash is gone
     if IsExecutorSkillAttackLocked() == TRUE then
         return ATTACK_REQUEST_INVALID
@@ -4083,7 +4102,16 @@ end
 
 lastUsedMagicAnim = -1
 
+-- Executor Rework: casting ends the Beast exit protection
 function ExecMagic(quick_type, blend_type, is_ride)
+    local result = ExecMagicBase(quick_type, blend_type, is_ride)
+    if result == TRUE then
+        EndExecutorBeastExitProtection()
+    end
+    return result
+end
+
+function ExecMagicBase(quick_type, blend_type, is_ride)
     if GetVariable("AddFookShotBlend") == 1 then
         return FALSE
     end
@@ -4507,7 +4535,16 @@ function ExecStealthItem(blend_type, item_type)
     
 end
 
+-- Executor Rework: using an item ends the Beast exit protection
 function ExecItem(quick_type, blend_type)
+    local result = ExecItemBase(quick_type, blend_type)
+    if result == TRUE then
+        EndExecutorBeastExitProtection()
+    end
+    return result
+end
+
+function ExecItemBase(quick_type, blend_type)
     if GetVariable("AddFookShotBlend") == 1 then
         return FALSE
     end
